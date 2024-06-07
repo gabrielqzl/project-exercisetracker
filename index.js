@@ -55,6 +55,9 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
   const { description, duration, date } = req.body;
   const exerciseDate = date ? new Date(date) : new Date();
   try {
+    const user = await User.findById(_id);
+    if (!user) return res.status(400).json({ error: 'Usuario no encontrado' });
+
     const newExercise = new Exercise({
       userId: _id,
       description,
@@ -62,7 +65,7 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
       date: exerciseDate.toDateString()
     });
     const savedExercise = await newExercise.save();
-    const user = await User.findById(_id);
+
     res.json({
       username: user.username,
       description: savedExercise.description,
