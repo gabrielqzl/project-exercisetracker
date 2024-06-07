@@ -1,0 +1,56 @@
+[
+  {
+    "username": "fcc_test_17177802244",
+    "_id": "5b423ab9211642c0899a951d",
+    "count": 0,
+    "log": []
+  },
+  {
+    "username": "fcc_test_17177802245",
+    "_id": "95699d5ed9ce43f0a8d2734d",
+    "count": 1,
+    "log": [
+      {
+        "description": "test",
+        "duration": "60",
+        "date": "Sun Dec 31 1989"
+      }
+    ]
+  },
+  {
+    "username": "fcc_test_17177802246",
+    "_id": "41f35acf758845a9ac5410c7",
+    "count": 1,
+    "log": [
+      {
+        "description": "test",
+        "duration": "60",
+        "date": "Fri Jun 07 2024"
+      }
+    ]
+  },
+  {
+    "username": "fcc_test_17177802247",
+    "_id": "fd5d6bf30e694a1b94cb5ff4",
+    "count": 1,
+    "log": [
+      {
+        "description": "test",
+        "duration": "60",
+        "date": "Fri Jun 07 2024"
+      }
+    ]
+  },
+  {
+    "username": "fcc_test_17177802248",
+    "_id": "d52791b7c6814ca2886032e2",
+    "count": 1,
+    "log": [
+      {
+        "description": "test",
+        "duration": "60",
+        "date": "Fri Jun 07 2024"
+      }
+    ]
+  }
+]

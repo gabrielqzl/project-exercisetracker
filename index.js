@@ -1,74 +1,115 @@
-require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
-const dns = require('dns');
-const url = require('url');
-const bodyParser = require('body-parser');
-
 const app = express();
-
-// Basic Configuration
-const port = process.env.PORT || 3000;
+const cors = require('cors');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+require('dotenv').config();
 
 app.use(cors());
-app.use('/public', express.static(`${process.cwd()}/public`));
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+app.use(express.static('public'));
+app.use(bodyParser.urlencoded({ extended: true }));
 
-app.get('/', function (req, res) {
-  res.sendFile(process.cwd() + '/views/index.html');
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/views/index.html');
 });
 
-// Your first API endpoint
-app.get('/api/hello', function (req, res) {
-  res.json({ greeting: 'hello API' });
+// Conexión a MongoDB
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/exercise-tracker', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => {
+  console.log('Connected to MongoDB');
+}).catch((err) => {
+  console.error('Error connecting to MongoDB:', err.message);
 });
 
-let urlDatabase = {};
-let urlCounter = 1;
+// Modelos
+const User = require('./models/user');
+const Exercise = require('./models/exercise');
 
-// Ruta para acortar una URL
-app.post('/api/shorturl', (req, res) => {
-  const originalUrl = req.body.url;
-
-  // Validar la URL utilizando una expresión regular
-  const urlPattern = /^(http|https):\/\/[^ "]+$/;
-  if (!urlPattern.test(originalUrl)) {
-    return res.json({ error: 'invalid url' });
+// Crear un nuevo usuario
+app.post('/api/users', async (req, res) => {
+  const { username } = req.body;
+  try {
+    const newUser = new User({ username });
+    const savedUser = await newUser.save();
+    res.json({ username: savedUser.username, _id: savedUser._id });
+  } catch (err) {
+    res.status(400).json({ error: 'Error al crear el usuario' });
   }
+});
 
-  // Extraer el hostname para usar dns.lookup
-  const hostname = url.parse(originalUrl).hostname;
+// Obtener la lista de usuarios
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await User.find({}, 'username _id');
+    res.json(users);
+  } catch (err) {
+    res.status(400).json({ error: 'Error al obtener los usuarios' });
+  }
+});
 
-  dns.lookup(hostname, (err, addresses) => {
-    if (err) {
-      return res.json({ error: 'invalid url' });
+// Añadir un ejercicio
+app.post('/api/users/:_id/exercises', async (req, res) => {
+  const { _id } = req.params;
+  const { description, duration, date } = req.body;
+  const exerciseDate = date ? new Date(date) : new Date();
+  try {
+    const newExercise = new Exercise({
+      userId: _id,
+      description,
+      duration,
+      date: exerciseDate.toDateString()
+    });
+    const savedExercise = await newExercise.save();
+    const user = await User.findById(_id);
+    res.json({
+      username: user.username,
+      description: savedExercise.description,
+      duration: savedExercise.duration,
+      date: savedExercise.date,
+      _id: user._id
+    });
+  } catch (err) {
+    res.status(400).json({ error: 'Error al añadir el ejercicio' });
+  }
+});
+
+// Obtener el log de ejercicios de un usuario
+app.get('/api/users/:_id/logs', async (req, res) => {
+  const { _id } = req.params;
+  const { from, to, limit } = req.query;
+
+  try {
+    const user = await User.findById(_id);
+    if (!user) return res.status(400).json({ error: 'Usuario no encontrado' });
+
+    let query = { userId: _id };
+    if (from || to) {
+      query.date = {};
+      if (from) query.date.$gte = new Date(from);
+      if (to) query.date.$lte = new Date(to);
     }
 
-    // Crear una nueva entrada en la base de datos
-    const shortUrl = urlCounter++;
-    urlDatabase[shortUrl] = originalUrl;
+    let exercises = await Exercise.find(query).limit(parseInt(limit)).exec();
 
-    // Responder con la URL original y la URL acortada
+    exercises = exercises.map(ex => ({
+      description: ex.description,
+      duration: ex.duration,
+      date: new Date(ex.date).toDateString()
+    }));
+
     res.json({
-      original_url: originalUrl,
-      short_url: shortUrl
+      username: user.username,
+      count: exercises.length,
+      _id: user._id,
+      log: exercises
     });
-  });
-});
-
-// Ruta para redirigir a la URL original
-app.get('/api/shorturl/:shortUrl', (req, res) => {
-  const shortUrl = req.params.shortUrl;
-  const originalUrl = urlDatabase[shortUrl];
-
-  if (originalUrl) {
-    res.redirect(originalUrl);
-  } else {
-    res.json({ error: 'No URL found' });
+  } catch (err) {
+    res.status(400).json({ error: 'Error al obtener el log de ejercicios' });
   }
 });
 
-app.listen(port, function () {
-  console.log(`Listening on port ${port}`);
+const listener = app.listen(process.env.PORT || 3000, () => {
+  console.log('Your app is listening on port ' + listener.address().port);
 });
