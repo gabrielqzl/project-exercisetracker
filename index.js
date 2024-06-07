@@ -49,32 +49,38 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-// Añadir un ejercicio
+// Añadir un ejercicio usando el nuevo estilo
 app.post('/api/users/:_id/exercises', async (req, res) => {
-  const { _id } = req.params;
-  const { description, duration, date } = req.body;
-  const exerciseDate = date ? new Date(date) : new Date();
   try {
-    const user = await User.findById(_id);
-    if (!user) return res.status(400).json({ error: 'Usuario no encontrado' });
+    const _id = req.params._id;
+    const foundUser = await User.findOne({ "_id": _id });
 
-    const newExercise = new Exercise({
+    if (!foundUser) {
+      return res.status(404).json({ "message": `User with id ${_id} not found` });
+    }
+
+    const { username } = foundUser;
+    const { description, duration, date } = req.body;
+    const newExercise = {
       userId: _id,
       description,
       duration: parseInt(duration),
-      date: exerciseDate.toDateString()
-    });
-    const savedExercise = await newExercise.save();
+      date: date ? new Date(date).toDateString() : new Date().toDateString()
+    };
 
-    res.json({
-      _id: user._id,
-      username: user.username,
-      description: savedExercise.description,
-      duration: savedExercise.duration,
-      date: savedExercise.date
-    });
-  } catch (err) {
-    res.status(400).json({ error: 'Error al añadir el ejercicio' });
+    const created = await Exercise.create(newExercise);
+    const exercise = {
+      username,
+      description: created.description,
+      duration: created.duration,
+      date: created.date,
+      _id: _id
+    };
+
+    res.status(201).json(exercise);
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).json({ "message": "Server error" });
   }
 });
 
