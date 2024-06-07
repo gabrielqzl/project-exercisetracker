@@ -61,17 +61,17 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
     const newExercise = new Exercise({
       userId: _id,
       description,
-      duration,
+      duration: parseInt(duration),
       date: exerciseDate.toDateString()
     });
     const savedExercise = await newExercise.save();
 
     res.json({
+      _id: user._id,
       username: user.username,
       description: savedExercise.description,
       duration: savedExercise.duration,
-      date: savedExercise.date,
-      _id: user._id
+      date: savedExercise.date
     });
   } catch (err) {
     res.status(400).json({ error: 'Error al añadir el ejercicio' });
